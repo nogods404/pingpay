@@ -33,20 +33,20 @@ async function parseCommandWithAI(command) {
 			messages: [
 				{
 					role: "system",
-					content: `You are a payment command parser. Extract the amount (in ETH) and recipient Telegram handle from user messages.
+					content: `You are a payment command parser. Extract the amount (in USDC) and recipient Telegram handle from user messages.
 
 Rules:
-- Amount should be a number (can be decimal like 0.01, 0.5, 1.5)
+- Amount should be a number (can be decimal like 0.5, 1, 10, 100)
 - Recipient is a Telegram handle (usually starts with @ but not always)
 - If you can't find both amount AND recipient, return null for both
 - Return ONLY valid JSON, no explanation
 
 Examples:
-"send 0.01 eth to @alice" -> {"amount": 0.01, "recipient": "alice"}
-"pay bob 0.5" -> {"amount": 0.5, "recipient": "bob"}
-"@john needs 2 eth" -> {"amount": 2, "recipient": "john"}
-"transfer 0.1 to alice" -> {"amount": 0.1, "recipient": "alice"}
-"give @mike 0.05 eth please" -> {"amount": 0.05, "recipient": "mike"}
+"send 10 usdc to @alice" -> {"amount": 10, "recipient": "alice"}
+"pay bob 50" -> {"amount": 50, "recipient": "bob"}
+"@john needs 25 usdc" -> {"amount": 25, "recipient": "john"}
+"transfer 100 to alice" -> {"amount": 100, "recipient": "alice"}
+"give @mike 5 usdc please" -> {"amount": 5, "recipient": "mike"}
 "I want to send some money to bob" -> {"amount": null, "recipient": null}
 "hello" -> {"amount": null, "recipient": null}`,
 				},
@@ -84,10 +84,10 @@ Examples:
 // Regex fallback parser
 function parseWithRegex(command) {
 	const patterns = [
-		/(?:send|pay|transfer|give)\s+(\d+(?:\.\d+)?)\s*(?:eth)?\s+to\s+@?(\w+)/i,
-		/(?:send|pay|transfer|give)\s+@?(\w+)\s+(\d+(?:\.\d+)?)\s*(?:eth)?/i,
-		/@(\w+)\s+.*?(\d+(?:\.\d+)?)\s*(?:eth)?/i,
-		/(\d+(?:\.\d+)?)\s*(?:eth)?\s+.*?@(\w+)/i,
+		/(?:send|pay|transfer|give)\s+(\d+(?:\.\d+)?)\s*(?:usdc|usd)?\s+to\s+@?(\w+)/i,
+		/(?:send|pay|transfer|give)\s+@?(\w+)\s+(\d+(?:\.\d+)?)\s*(?:usdc|usd)?/i,
+		/@(\w+)\s+.*?(\d+(?:\.\d+)?)\s*(?:usdc|usd)?/i,
+		/(\d+(?:\.\d+)?)\s*(?:usdc|usd)?\s+.*?@(\w+)/i,
 	];
 
 	for (let i = 0; i < patterns.length; i++) {
@@ -118,7 +118,7 @@ function parseWithRegex(command) {
 	return {
 		success: false,
 		error:
-			'Could not understand command. Try something like "send 0.01 eth to @username"',
+			'Could not understand command. Try something like "send 10 usdc to @username"',
 	};
 }
 

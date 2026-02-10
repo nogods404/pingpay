@@ -26,7 +26,7 @@ export default function ConfirmModal({
 					<div className="glass rounded-xl p-4">
 						<div className="flex items-center justify-between mb-4">
 							<span className="text-dark-400">Amount</span>
-							<span className="text-2xl font-bold">{parsed.amount} ETH</span>
+							<span className="text-2xl font-bold">{parsed.amount} USDC</span>
 						</div>
 						<div className="flex items-center justify-between">
 							<span className="text-dark-400">Recipient</span>

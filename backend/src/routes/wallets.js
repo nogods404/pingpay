@@ -5,19 +5,20 @@ const {
 	getWalletByHandle,
 	getWalletByAddress,
 } = require("../database");
-const { createNewWallet, getEthBalance } = require("../services/blockchain");
+const { createNewWallet, getUsdcBalance, getUsdcAddress } = require("../services/blockchain");
 
 // GET /api/wallets/balance/:address - Get wallet balance
 router.get("/balance/:address", async (req, res) => {
 	try {
 		const { address } = req.params;
-		const ethBalance = await getEthBalance(address);
+		const usdcBalance = await getUsdcBalance(address);
 
 		res.json({
 			success: true,
 			balance: {
-				eth: ethBalance,
+				usdc: usdcBalance,
 			},
+			usdcAddress: getUsdcAddress(),
 		});
 	} catch (error) {
 		console.error("Balance error:", error);
@@ -36,14 +37,14 @@ router.get("/handle/:handle", async (req, res) => {
 				.json({ error: "Wallet not found for this handle" });
 		}
 
-		const ethBalance = await getEthBalance(wallet.walletAddress);
+		const usdcBalance = await getUsdcBalance(wallet.walletAddress);
 
 		res.json({
 			success: true,
 			wallet: {
 				handle: wallet.telegramHandle,
 				address: wallet.walletAddress,
-				ethBalance,
+				usdcBalance,
 			},
 		});
 	} catch (error) {
@@ -65,14 +66,14 @@ router.post("/create", async (req, res) => {
 		const existing = await getWalletByHandle(handle);
 
 		if (existing) {
-			const ethBalance = await getEthBalance(existing.walletAddress);
+			const usdcBalance = await getUsdcBalance(existing.walletAddress);
 
 			return res.json({
 				success: true,
 				wallet: {
 					handle: existing.telegramHandle,
 					address: existing.walletAddress,
-					ethBalance,
+					usdcBalance,
 					isNew: false,
 				},
 			});
@@ -91,7 +92,7 @@ router.post("/create", async (req, res) => {
 			wallet: {
 				handle: wallet.telegramHandle,
 				address: wallet.walletAddress,
-				ethBalance: "0",
+				usdcBalance: "0",
 				isNew: true,
 			},
 		});

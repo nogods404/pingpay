@@ -38,7 +38,7 @@ export default function HistoryPage() {
 			{/* Info Banner */}
 			<div className="px-4 py-2">
 				<p className="text-xs text-dark-500">
-					Shows ETH you've sent. To see received funds, go to Receive page.
+					Shows USDC you've sent. To see received funds, go to Receive page.
 				</p>
 			</div>
 
@@ -102,9 +102,9 @@ function TransactionCard({ transaction }) {
 				</div>
 				<div className="text-right">
 					<p className="text-lg font-bold text-red-400">
-						-{parseFloat(transaction.amount).toFixed(4)}
+						-{parseFloat(transaction.amount).toFixed(2)}
 					</p>
-					<p className="text-xs text-dark-500">ETH</p>
+					<p className="text-xs text-dark-500">USDC</p>
 				</div>
 			</div>
 

@@ -112,6 +112,12 @@ export default function HomePage() {
 		}
 	}
 
+	// USDC Contract address on Arbitrum Sepolia
+	const USDC_ADDRESS = "0x0050EAB3c59C945aE92858121c88752e8871185D";
+
+	// ERC20 transfer function signature: transfer(address,uint256)
+	const ERC20_TRANSFER_ABI = "0xa9059cbb";
+
 	async function handleConfirmSend() {
 		if (!parsedCommand || !preparedTransfer) return;
 
@@ -122,27 +128,28 @@ export default function HomePage() {
 			// Ensure user is on Arbitrum Sepolia before sending
 			await ensureCorrectChain();
 
-			// For native ETH, we just send directly to the recipient address
+			// For USDC ERC20 transfer
 			const amount = parsedCommand.amount;
-			// Convert ETH to wei (hex)
-			const amountInWei = "0x" + BigInt(Math.floor(amount * 1e18)).toString(16);
+			// USDC has 6 decimals
+			const amountInUnits = BigInt(Math.floor(amount * 1e6));
 
-			// Get current gas price from network and add buffer
-			const gasPrice = await window.ethereum.request({
-				method: "eth_gasPrice",
-			});
-			const gasPriceWithBuffer =
-				"0x" + ((BigInt(gasPrice) * 12n) / 10n).toString(16); // 20% buffer
+			// Encode the transfer function call
+			// transfer(address to, uint256 amount)
+			const toAddressPadded = preparedTransfer.recipientAddress
+				.slice(2)
+				.toLowerCase()
+				.padStart(64, "0");
+			const amountPadded = amountInUnits.toString(16).padStart(64, "0");
+			const data = ERC20_TRANSFER_ABI + toAddressPadded + amountPadded;
 
-			// Send ETH transaction via MetaMask
+			// Send ERC20 transfer transaction via MetaMask
 			const txHash = await window.ethereum.request({
 				method: "eth_sendTransaction",
 				params: [
 					{
 						from: connectedAddress,
-						to: preparedTransfer.recipientAddress,
-						value: amountInWei,
-						gasPrice: gasPriceWithBuffer,
+						to: USDC_ADDRESS,
+						data: data,
 					},
 				],
 			});
@@ -190,10 +197,10 @@ export default function HomePage() {
 					</div>
 
 					<h1 className="text-2xl font-bold mb-2 text-center">
-						Send ETH via Telegram
+						Send USDC via Telegram
 					</h1>
 					<p className="text-dark-400 text-center mb-8 max-w-xs">
-						Connect your wallet to send ETH to anyone using their Telegram
+						Connect your wallet to send USDC to anyone using their Telegram
 						handle
 					</p>
 
@@ -283,9 +290,9 @@ export default function HomePage() {
 
 					<div className="flex items-end justify-between">
 						<div>
-							<p className="text-sm text-dark-400 mb-1">ETH Balance</p>
+							<p className="text-sm text-dark-400 mb-1">USDC Balance</p>
 							<p className="text-3xl font-bold">
-								{parseFloat(wallet?.ethBalance || 0).toFixed(4)} ETH
+								{parseFloat(wallet?.usdcBalance || 0).toFixed(2)} USDC
 							</p>
 						</div>
 						<button
@@ -310,7 +317,7 @@ export default function HomePage() {
 								</div>
 								<div>
 									<p className="font-medium">
-										Sent {recentTransfer.amount} ETH
+										Sent {recentTransfer.amount} USDC
 									</p>
 									<p className="text-sm text-dark-400">
 										to @{recentTransfer.recipient}
@@ -342,7 +349,7 @@ export default function HomePage() {
 					<div className="text-center">
 						<p className="text-dark-400 mb-2">Type a command like:</p>
 						<p className="text-lg font-mono text-primary-400">
-							"send 0.01 eth to @alice"
+							"send 10 usdc to @alice"
 						</p>
 					</div>
 				</div>
@@ -383,7 +390,7 @@ export default function HomePage() {
 							type="text"
 							value={command}
 							onChange={(e) => setCommand(e.target.value)}
-							placeholder="send 0.01 eth to @username"
+							placeholder="send 10 usdc to @username"
 							className="flex-1 bg-transparent px-3 py-3 text-white placeholder-dark-500 outline-none font-mono"
 							disabled={parsing}
 						/>
@@ -486,7 +493,7 @@ function TransferItem({ transfer }) {
 			</div>
 			<div className="text-right">
 				<p className="font-medium text-red-400">
-					-{parseFloat(transfer.amount).toFixed(4)} ETH
+					-{parseFloat(transfer.amount).toFixed(2)} USDC
 				</p>
 				<span className="text-xs text-emerald-400 flex items-center gap-0.5">
 					<CheckCheck className="w-3 h-3" /> Sent

@@ -1,8 +1,27 @@
 const { ethers } = require("ethers");
 
+// USDC Token Contract Address (Arbitrum Sepolia)
+const USDC_ADDRESS = "0x0050EAB3c59C945aE92858121c88752e8871185D";
+
+// ERC20 ABI for balanceOf, transfer, and Transfer event
+const ERC20_ABI = [
+	"function balanceOf(address owner) view returns (uint256)",
+	"function transfer(address to, uint256 amount) returns (bool)",
+	"function decimals() view returns (uint8)",
+	"function symbol() view returns (string)",
+	"function approve(address spender, uint256 amount) returns (bool)",
+	"function allowance(address owner, address spender) view returns (uint256)",
+	"event Transfer(address indexed from, address indexed to, uint256 value)",
+];
+
 // Initialize provider
 function getProvider() {
 	return new ethers.JsonRpcProvider(process.env.RPC_URL);
+}
+
+// Get USDC contract instance
+function getUsdcContract(signerOrProvider) {
+	return new ethers.Contract(USDC_ADDRESS, ERC20_ABI, signerOrProvider);
 }
 
 // Create a new wallet for recipient
@@ -20,7 +39,7 @@ function getWalletFromPrivateKey(privateKey) {
 	return new ethers.Wallet(privateKey, provider);
 }
 
-// Get ETH balance for an address
+// Get ETH balance for an address (for gas)
 async function getEthBalance(address) {
 	try {
 		const provider = getProvider();
@@ -32,13 +51,27 @@ async function getEthBalance(address) {
 	}
 }
 
-// Verify a transaction was sent to the correct address with correct amount
+// Get USDC balance for an address
+async function getUsdcBalance(address) {
+	try {
+		const provider = getProvider();
+		const usdc = getUsdcContract(provider);
+		const balance = await usdc.balanceOf(address);
+		// USDC has 6 decimals
+		return ethers.formatUnits(balance, 6);
+	} catch (error) {
+		console.error("Error getting USDC balance:", error);
+		return "0";
+	}
+}
+
+// Verify a USDC transfer transaction
 async function verifyTransaction(txHash, expectedTo, expectedAmount) {
 	try {
 		const provider = getProvider();
 
 		console.log(`Verifying tx: ${txHash}`);
-		console.log(`Expected to: ${expectedTo}, amount: ${expectedAmount} ETH`);
+		console.log(`Expected to: ${expectedTo}, amount: ${expectedAmount} USDC`);
 
 		// Get transaction - retry a few times as it may not be immediately available
 		let tx = null;
@@ -63,21 +96,30 @@ async function verifyTransaction(txHash, expectedTo, expectedAmount) {
 
 		console.log(`Transaction confirmed in block ${receipt.blockNumber}`);
 
-		// Verify recipient and amount
-		const actualTo = tx.to?.toLowerCase();
-		const actualAmount = ethers.formatEther(tx.value);
-
-		console.log(`Actual to: ${actualTo}, amount: ${actualAmount} ETH`);
-
-		if (actualTo !== expectedTo.toLowerCase()) {
-			return {
-				success: false,
-				error: `Wrong recipient: expected ${expectedTo}, got ${actualTo}`,
-			};
+		// For ERC20, we need to check the logs for Transfer event
+		const usdc = getUsdcContract(provider);
+		
+		// Parse logs to find Transfer event
+		let transferAmount = 0n;
+		for (const log of receipt.logs) {
+			try {
+				const parsed = usdc.interface.parseLog(log);
+				if (parsed && parsed.name === "Transfer") {
+					const [from, to, amount] = parsed.args;
+					if (to.toLowerCase() === expectedTo.toLowerCase()) {
+						transferAmount = amount;
+						break;
+					}
+				}
+			} catch (e) {
+				// Not a Transfer event from USDC, skip
+			}
 		}
 
+		const actualAmount = ethers.formatUnits(transferAmount, 6);
+		console.log(`Actual transfer amount: ${actualAmount} USDC`);
+
 		if (parseFloat(actualAmount) < parseFloat(expectedAmount) * 0.99) {
-			// Allow 1% tolerance for rounding
 			return {
 				success: false,
 				error: `Amount too low: expected ${expectedAmount}, got ${actualAmount}`,
@@ -87,7 +129,7 @@ async function verifyTransaction(txHash, expectedTo, expectedAmount) {
 		return {
 			success: true,
 			from: tx.from,
-			to: actualTo,
+			to: expectedTo,
 			amount: actualAmount,
 			blockNumber: receipt.blockNumber,
 			txHash: txHash,
@@ -98,20 +140,19 @@ async function verifyTransaction(txHash, expectedTo, expectedAmount) {
 	}
 }
 
-// Send ETH from a wallet (for withdrawals)
-async function sendEthFromWallet(privateKey, toAddress, amount) {
+// Send USDC from a wallet (for withdrawals)
+async function sendUsdcFromWallet(privateKey, toAddress, amount) {
 	try {
 		const wallet = getWalletFromPrivateKey(privateKey);
+		const usdc = getUsdcContract(wallet);
 
-		const amountInWei = ethers.parseEther(amount.toString());
+		// USDC has 6 decimals
+		const amountInUnits = ethers.parseUnits(amount.toString(), 6);
 
-		console.log(`Sending ${amount} ETH to ${toAddress}`);
+		console.log(`Sending ${amount} USDC to ${toAddress}`);
 
-		// Send transaction
-		const tx = await wallet.sendTransaction({
-			to: toAddress,
-			value: amountInWei,
-		});
+		// Send USDC transfer
+		const tx = await usdc.transfer(toAddress, amountInUnits);
 
 		console.log(`Transaction sent: ${tx.hash}`);
 
@@ -126,7 +167,7 @@ async function sendEthFromWallet(privateKey, toAddress, amount) {
 			blockNumber: receipt.blockNumber,
 		};
 	} catch (error) {
-		console.error("Error sending ETH:", error);
+		console.error("Error sending USDC:", error);
 		return {
 			success: false,
 			error: error.message,
@@ -134,64 +175,41 @@ async function sendEthFromWallet(privateKey, toAddress, amount) {
 	}
 }
 
-// Send maximum ETH from a wallet (balance minus gas)
-async function sendMaxEthFromWallet(privateKey, toAddress) {
+// Send all USDC from a wallet
+async function sendMaxUsdcFromWallet(privateKey, toAddress) {
 	try {
 		const wallet = getWalletFromPrivateKey(privateKey);
 		const provider = getProvider();
+		const usdc = getUsdcContract(wallet);
 
-		// Get current balance
-		const balance = await provider.getBalance(wallet.address);
-
-		// Get fee data
-		const feeData = await provider.getFeeData();
-
-		// Use maxFeePerGas with 100% buffer
-		const maxFeePerGas = feeData.maxFeePerGas
-			? feeData.maxFeePerGas * 2n
-			: feeData.gasPrice * 2n;
-		// maxPriorityFeePerGas must be <= maxFeePerGas
-		const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas
-			? feeData.maxPriorityFeePerGas > maxFeePerGas
-				? maxFeePerGas
-				: feeData.maxPriorityFeePerGas
-			: maxFeePerGas / 10n;
-
-		// Estimate gas for this specific transaction
-		const gasEstimate = await provider.estimateGas({
-			from: wallet.address,
-			to: toAddress,
-			value: 1n, // placeholder value
-		});
-		const gasLimit = (gasEstimate * 12n) / 10n; // 20% buffer on gas limit
-
-		const gasCost = gasLimit * maxFeePerGas;
-
-		// Calculate amount to send (balance - gas)
-		const amountToSend = balance - gasCost;
-
-		if (amountToSend <= 0n) {
+		// Get USDC balance
+		const balance = await usdc.balanceOf(wallet.address);
+		
+		if (balance <= 0n) {
 			return {
 				success: false,
-				error: "Balance too low to cover gas fees",
+				error: "No USDC balance to withdraw",
 			};
 		}
 
-		console.log(`Balance: ${ethers.formatEther(balance)} ETH`);
-		console.log(`Gas limit: ${gasLimit}, maxFeePerGas: ${maxFeePerGas}`);
-		console.log(`Gas cost estimate: ${ethers.formatEther(gasCost)} ETH`);
-		console.log(
-			`Sending: ${ethers.formatEther(amountToSend)} ETH to ${toAddress}`,
-		);
+		const amountFormatted = ethers.formatUnits(balance, 6);
+		console.log(`Sending all USDC: ${amountFormatted} to ${toAddress}`);
 
-		// Send transaction with EIP-1559 parameters
-		const tx = await wallet.sendTransaction({
-			to: toAddress,
-			value: amountToSend,
-			gasLimit: gasLimit,
-			maxFeePerGas: maxFeePerGas,
-			maxPriorityFeePerGas: maxPriorityFeePerGas,
-		});
+		// Check if wallet has enough ETH for gas
+		const ethBalance = await provider.getBalance(wallet.address);
+		const feeData = await provider.getFeeData();
+		const estimatedGas = 100000n; // ERC20 transfer typically needs ~60k gas
+		const gasCost = estimatedGas * (feeData.maxFeePerGas || feeData.gasPrice);
+
+		if (ethBalance < gasCost) {
+			return {
+				success: false,
+				error: `Insufficient ETH for gas. Need ~${ethers.formatEther(gasCost)} ETH`,
+			};
+		}
+
+		// Send all USDC
+		const tx = await usdc.transfer(toAddress, balance);
 
 		console.log(`Transaction sent: ${tx.hash}`);
 
@@ -202,11 +220,11 @@ async function sendMaxEthFromWallet(privateKey, toAddress) {
 		return {
 			success: true,
 			txHash: tx.hash,
-			amount: ethers.formatEther(amountToSend),
+			amount: amountFormatted,
 			blockNumber: receipt.blockNumber,
 		};
 	} catch (error) {
-		console.error("Error sending max ETH:", error);
+		console.error("Error sending max USDC:", error);
 		return {
 			success: false,
 			error: error.message,
@@ -214,13 +232,13 @@ async function sendMaxEthFromWallet(privateKey, toAddress) {
 	}
 }
 
-// Estimate gas for ETH transfer
+// Estimate gas for USDC transfer
 async function estimateGas(fromAddress, toAddress, amount) {
 	try {
 		const provider = getProvider();
 
-		// Standard ETH transfer gas
-		const gasLimit = 21000n;
+		// ERC20 transfer gas estimate
+		const gasLimit = 100000n;
 
 		const feeData = await provider.getFeeData();
 		const gasCost = gasLimit * feeData.gasPrice;
@@ -233,7 +251,7 @@ async function estimateGas(fromAddress, toAddress, amount) {
 	} catch (error) {
 		console.error("Error estimating gas:", error);
 		return {
-			gasLimit: "21000",
+			gasLimit: "100000",
 			gasPrice: "0.1",
 			estimatedCost: "0.00001",
 		};
@@ -245,14 +263,22 @@ function getExplorerUrl(txHash) {
 	return `https://sepolia.arbiscan.io/tx/${txHash}`;
 }
 
+// Get USDC contract address
+function getUsdcAddress() {
+	return USDC_ADDRESS;
+}
+
 module.exports = {
 	getProvider,
 	createNewWallet,
 	getWalletFromPrivateKey,
 	getEthBalance,
+	getUsdcBalance,
+	getUsdcContract,
+	getUsdcAddress,
 	verifyTransaction,
-	sendEthFromWallet,
-	sendMaxEthFromWallet,
+	sendUsdcFromWallet,
+	sendMaxUsdcFromWallet,
 	estimateGas,
 	getExplorerUrl,
 };

@@ -53,8 +53,8 @@ function initTelegramBot() {
 			bot.sendMessage(
 				chatId,
 				`👋 Welcome to PingPay${username ? `, @${username}` : ""}!\n\n` +
-					`✅ You're now registered to receive notifications when someone sends you ETH.\n\n` +
-					`Just share your Telegram handle with friends and they can send you ETH instantly!`,
+					`✅ You're now registered to receive notifications when someone sends you USDC.\n\n` +
+					`Just share your Telegram handle with friends and they can send you USDC instantly!`,
 			);
 		});
 
@@ -117,10 +117,10 @@ async function sendClaimNotification(
 
 	try {
 		const message =
-			`💰 You received ${amount} ETH${senderHandle ? ` from @${senderHandle}` : ""}!\n\n` +
-			`Go to PingPay to withdraw to your wallet.`;
+			`💰 You received ${amount} USDC${senderHandle ? ` from @${senderHandle}` : ""}!\n\n` +
+			`👉 Click here to claim: ${claimUrl}`;
 
-		await bot.sendMessage(chatId, message);
+		await bot.sendMessage(chatId, message, { disable_web_page_preview: false });
 
 		console.log(`✅ Notification sent to @${recipientHandle}`);
 		return { success: true, claimUrl };

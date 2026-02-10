@@ -7,9 +7,9 @@ const {
 	getPendingTransfersForRecipient,
 } = require("../database");
 const {
-	getEthBalance,
-	sendEthFromWallet,
-	sendMaxEthFromWallet,
+	getUsdcBalance,
+	sendUsdcFromWallet,
+	sendMaxUsdcFromWallet,
 	getExplorerUrl,
 } = require("../services/blockchain");
 
@@ -22,7 +22,7 @@ router.get("/:token", async (req, res) => {
 			return res.status(404).json({ error: "Claim not found or expired" });
 		}
 
-		const balance = await getEthBalance(transfer.recipientAddress);
+		const balance = await getUsdcBalance(transfer.recipientAddress);
 
 		res.json({
 			success: true,
@@ -71,7 +71,7 @@ router.post("/:token/verify", async (req, res) => {
 		// Check if already claimed
 		if (transfer.status === "claimed") {
 			const wallet = await getWalletByHandle(cleanHandle);
-			const balance = wallet ? await getEthBalance(wallet.walletAddress) : "0";
+			const balance = wallet ? await getUsdcBalance(wallet.walletAddress) : "0";
 
 			return res.json({
 				success: true,
@@ -94,7 +94,7 @@ router.post("/:token/verify", async (req, res) => {
 
 		// Get wallet info
 		const wallet = await getWalletByHandle(cleanHandle);
-		const balance = wallet ? await getEthBalance(wallet.walletAddress) : "0";
+		const balance = wallet ? await getUsdcBalance(wallet.walletAddress) : "0";
 
 		res.json({
 			success: true,
@@ -132,18 +132,18 @@ router.post("/withdraw", async (req, res) => {
 				.json({ error: "Wallet not found for this handle" });
 		}
 
-		// Check balance
-		const balance = await getEthBalance(wallet.walletAddress);
+		// Check USDC balance
+		const balance = await getUsdcBalance(wallet.walletAddress);
 
 		if (parseFloat(balance) <= 0) {
-			return res.status(400).json({ error: "No balance to withdraw" });
+			return res.status(400).json({ error: "No USDC balance to withdraw" });
 		}
 
 		let result;
 
-		// If withdrawMax is true, send all funds minus gas
+		// If withdrawMax is true, send all USDC
 		if (withdrawMax) {
-			result = await sendMaxEthFromWallet(wallet.privateKey, toAddress);
+			result = await sendMaxUsdcFromWallet(wallet.privateKey, toAddress);
 		} else {
 			if (!amount) {
 				return res
@@ -153,7 +153,7 @@ router.post("/withdraw", async (req, res) => {
 			if (parseFloat(balance) < parseFloat(amount)) {
 				return res.status(400).json({ error: "Insufficient balance" });
 			}
-			result = await sendEthFromWallet(wallet.privateKey, toAddress, amount);
+			result = await sendUsdcFromWallet(wallet.privateKey, toAddress, amount);
 		}
 
 		if (result.success) {
@@ -207,14 +207,14 @@ router.get("/wallet/:handle", async (req, res) => {
 			return res.status(404).json({ error: "No wallet found for this handle" });
 		}
 
-		const ethBalance = await getEthBalance(wallet.walletAddress);
+		const usdcBalance = await getUsdcBalance(wallet.walletAddress);
 
 		res.json({
 			success: true,
 			wallet: {
 				handle: wallet.telegramHandle,
 				address: wallet.walletAddress,
-				balance: ethBalance,
+				balance: usdcBalance,
 			},
 		});
 	} catch (error) {

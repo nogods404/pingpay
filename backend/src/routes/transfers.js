@@ -33,7 +33,7 @@ router.post("/parse", async (req, res) => {
 		return res.status(400).json({
 			error:
 				result.error ||
-				'Could not understand command. Try: "send 0.01 eth to @username"',
+				'Could not understand command. Try: "send 10 usdc to @username"',
 		});
 	}
 
@@ -42,7 +42,7 @@ router.post("/parse", async (req, res) => {
 		parsed: {
 			amount: result.amount,
 			recipient: result.recipient,
-			currency: "ETH",
+			currency: "USDC",
 			network: "Arbitrum Sepolia",
 		},
 	});

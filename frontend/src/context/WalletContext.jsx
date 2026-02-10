@@ -132,14 +132,15 @@ export function WalletProvider({ children }) {
 			const balanceData = await api.getBalance(address);
 			setWallet({
 				address,
-				ethBalance: balanceData.balance.eth,
+				usdcBalance: balanceData.balance.usdc,
+				usdcAddress: balanceData.usdcAddress,
 				network: "Arbitrum Sepolia",
 			});
 		} catch (error) {
 			console.error("Error loading wallet info:", error);
 			setWallet({
 				address,
-				ethBalance: "0",
+				usdcBalance: "0",
 				network: "Arbitrum Sepolia",
 			});
 		}
@@ -151,7 +152,8 @@ export function WalletProvider({ children }) {
 				const data = await api.getBalance(connectedAddress);
 				setWallet((prev) => ({
 					...prev,
-					ethBalance: data.balance.eth,
+					usdcBalance: data.balance.usdc,
+					usdcAddress: data.usdcAddress,
 				}));
 			} catch (error) {
 				console.error("Failed to refresh balance:", error);

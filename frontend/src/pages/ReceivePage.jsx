@@ -205,7 +205,7 @@ export default function ReceivePage() {
 
 							<p className="text-sm text-dark-400 mb-1">Available Balance</p>
 							<p className="text-4xl font-bold gradient-text mb-2">
-								{parseFloat(walletInfo?.balance || 0).toFixed(6)} ETH
+								{parseFloat(walletInfo?.balance || 0).toFixed(2)} USDC
 							</p>
 
 							{/* Wallet Address */}
@@ -261,10 +261,10 @@ export default function ReceivePage() {
 								<div className="mb-4 p-3 rounded-xl bg-dark-800/50">
 									<p className="text-xs text-dark-400 mb-1">Withdrawing:</p>
 									<p className="text-lg font-bold text-primary-400">
-										{walletInfo?.balance || "0"} ETH
+										{walletInfo?.balance || "0"} USDC
 									</p>
 									<p className="text-xs text-dark-500 mt-1">
-										(Full balance minus gas fees)
+										(Full USDC balance)
 									</p>
 								</div>
 
