@@ -1,8 +1,8 @@
 # PingPay
 
-**Send USDC via Telegram - No wallet required for recipients**
+**PingPay is an AI-powered money app on Arbitrum that turns conversations into transactions.**
 
-PingPay is a Telegram-first, mobile web app that lets users type **"send 20 usdc to @handle"** and deliver a **claim link** to that Telegram user. The recipient **does not need PingPay** or a **crypto wallet**.
+PingPay turns natural language into on-chain actions. PAY people instantly, SWEEP idle stables into yield, and INVEST into Bitcoin or Stocks — all from chat. Our first product, "PAY," allows anyone to send USDC to any type of identifier, like WhatsApp, Email ID or a Telegram handle. The receiver **does not need PingPay** or a **crypto wallet**.
 
 ## 🚀 Features
 
