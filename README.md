@@ -4,6 +4,10 @@
 
 PingPay turns natural language into on-chain actions. PAY people instantly, SWEEP idle stables into yield, and INVEST into Bitcoin or Stocks — all from chat. Our first product, "PAY," allows anyone to send USDC to any type of identifier, like WhatsApp, Email ID or a Telegram handle. The receiver **does not need PingPay** or a **crypto wallet**.
 
+## 🔗 Links
+- Working UI: https://pingpay-gz36.vercel.app/
+- Subscribe to the @pingpay_bot bot on Telegram to test the feature
+
 ## 🚀 Features
 
 - **Chat Command Interface**: Type natural commands like `send 20 usdc to @alice`
